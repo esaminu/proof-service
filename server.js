@@ -5,7 +5,7 @@ const Queue = require('bull');
 const app = express();
 app.use(express.json());
 // Create a new queue
-const proofQueue = new Queue('proof generation', process.env.REDIS_TLS_URL || process.env.REDIS_TEMPORARY_URL;);
+const proofQueue = new Queue('proof generation', process.env.REDIS_TLS_URL || process.env.REDIS_TEMPORARY_URL);
 
 const apiKeyAuth = (req, res, next) => {
   const apiKey = req.get('X-API-Key');
