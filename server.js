@@ -4,23 +4,8 @@ const Queue = require('bull');
 
 const app = express();
 app.use(express.json());
-
-const redisOptions = {
-    redis: {
-      port: process.env.REDIS_PORT,
-      host: process.env.REDIS_HOST,
-      password: process.env.REDIS_PASSWORD,
-      tls: {
-        rejectUnauthorized: false
-      },
-      retryStrategy: function(times) {
-        return Math.min(times * 50, 2000);
-      }
-    }
-  };
-
 // Create a new queue
-const proofQueue = new Queue('proof generation', process.env.REDIS_URL,redisOptions);
+const proofQueue = new Queue('proof generation', process.env.REDIS_TLS_URL || process.env.REDIS_TEMPORARY_URL;);
 
 const apiKeyAuth = (req, res, next) => {
   const apiKey = req.get('X-API-Key');
