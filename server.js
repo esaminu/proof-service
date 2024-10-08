@@ -5,8 +5,22 @@ const Queue = require('bull');
 const app = express();
 app.use(express.json());
 
+const redisOptions = {
+    redis: {
+      port: process.env.REDIS_PORT,
+      host: process.env.REDIS_HOST,
+      password: process.env.REDIS_PASSWORD,
+      tls: {
+        rejectUnauthorized: false
+      },
+      retryStrategy: function(times) {
+        return Math.min(times * 50, 2000);
+      }
+    }
+  };
+
 // Create a new queue
-const proofQueue = new Queue('proof generation', process.env.REDIS_URL);
+const proofQueue = new Queue('proof generation', process.env.REDIS_URL,redisOptions);
 
 const apiKeyAuth = (req, res, next) => {
   const apiKey = req.get('X-API-Key');
@@ -30,19 +44,25 @@ app.post('/generate-proof', async (req, res) => {
 });
 
 app.get('/job-status/:jobId', async (req, res) => {
-  try {
-    const job = await proofQueue.getJob(req.params.jobId);
-    if (!job) {
-      return res.status(404).json({ error: 'Job not found' });
+    try {
+      const job = await proofQueue.getJob(req.params.jobId);
+      if (!job) {
+        return res.status(404).json({ error: 'Job not found' });
+      }
+      const state = await job.getState();
+      if (state === 'completed') {
+        res.json({ id: job.id, state, result: job.returnvalue });
+      } else if (state === 'failed') {
+        res.status(500).json({ id: job.id, state, error: 'Job failed' });
+      } else {
+        res.status(202).json({ id: job.id, state });
+      }
+    } catch (error) {
+      console.error('Error fetching job status:', error);
+      res.status(500).json({ error: 'Failed to fetch job status' });
     }
-    const state = await job.getState();
-    const result = job.returnvalue;
-    res.json({ id: job.id, state, result });
-  } catch (error) {
-    console.error('Error fetching job status:', error);
-    res.status(500).json({ error: 'Failed to fetch job status' });
-  }
-});
+  });
+  
 
 // Worker process
 proofQueue.process(async (job) => {
