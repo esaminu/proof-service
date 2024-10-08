@@ -1,5 +1,4 @@
 const express = require('express');
-const snarkjs = require('snarkjs');
 const Queue = require('bull');
 const Redis = require('ioredis');
 
@@ -103,33 +102,6 @@ app.get('/job-status/:jobId', async (req, res) => {
   }
 });
 
-// Worker process
-proofQueue.process(async (job) => {
-  console.log(`Processing job ${job.id}`);
-  try {
-    const { proof, publicSignals } = await snarkjs.groth16.fullProve(
-      job.data.input,
-      'rsa_verify.wasm',
-      'rsa_verify_0001.zkey'
-    );
-    console.log(`Completed job ${job.id}`);
-    return { proof, publicSignals };
-  } catch (error) {
-    console.error(`Error processing job ${job.id}:`, error);
-    throw error; // This will cause the job to be marked as failed
-  }
-});
-
-// Log completed jobs
-proofQueue.on('completed', (job, result) => {
-  console.log(`Job ${job.id} completed.`);
-});
-
-// Log failed jobs
-proofQueue.on('failed', (job, error) => {
-  console.error(`Job ${job.id} failed with error:`, error);
-});
-
 // Graceful shutdown
 async function gracefulShutdown(signal) {
   console.log(`${signal} received, shutting down gracefully`);
@@ -159,3 +131,35 @@ server.on('close', async () => {
   await proofQueue.close();
   await redisClient.quit();
 });
+
+// Only start the worker process if this is the worker dyno
+if (process.env.DYNO && process.env.DYNO.startsWith('worker')) {
+  const snarkjs = require('snarkjs');
+
+  // Worker process
+  proofQueue.process(async (job) => {
+    console.log(`Processing job ${job.id}`);
+    try {
+      const { proof, publicSignals } = await snarkjs.groth16.fullProve(
+        job.data.input,
+        'rsa_verify.wasm',
+        'rsa_verify_0001.zkey'
+      );
+      console.log(`Completed job ${job.id}`);
+      return { proof, publicSignals };
+    } catch (error) {
+      console.error(`Error processing job ${job.id}:`, error);
+      throw error; // This will cause the job to be marked as failed
+    }
+  });
+
+  // Log completed jobs
+  proofQueue.on('completed', (job, result) => {
+    console.log(`Job ${job.id} completed.`);
+  });
+
+  // Log failed jobs
+  proofQueue.on('failed', (job, error) => {
+    console.error(`Job ${job.id} failed with error:`, error);
+  });
+}
