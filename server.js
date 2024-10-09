@@ -1,7 +1,7 @@
 const express = require('express');
 const Queue = require('bull');
 const Redis = require('ioredis');
-const { exec } = require('child_process');
+const { execFile } = require('child_process');
 const fs = require('fs').promises;
 const path = require('path');
 
