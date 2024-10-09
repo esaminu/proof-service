@@ -1,6 +1,9 @@
 const express = require('express');
 const Queue = require('bull');
 const Redis = require('ioredis');
+const { exec } = require('child_process');
+const fs = require('fs').promises;
+const path = require('path');
 
 const app = express();
 app.use(express.json());
@@ -134,19 +137,34 @@ server.on('close', async () => {
 
 // Only start the worker process if this is the worker dyno
 if (process.env.DYNO && process.env.DYNO.startsWith('worker')) {
-  const snarkjs = require('snarkjs');
-
   // Worker process
   proofQueue.process(async (job) => {
     console.log(`Processing job ${job.id}`);
     try {
-      const { proof, publicSignals } = await snarkjs.groth16.fullProve(
-        job.data.input,
-        'rsa_verify.wasm',
-        'rsa_verify_0001.zkey'
-      );
+      // Write input to a temporary file
+      const inputFile = path.join('/tmp', `input_${job.id}.json`);
+      await fs.writeFile(inputFile, JSON.stringify(job.data.input));
+
+      // Path to the prover binary and zkey file
+      const proverPath = path.join(__dirname, 'prover');
+      const zkeyPath = path.join(__dirname, 'rsa_verify_0001.zkey');
+
+      // Execute the prover
+      const { stdout, stderr } = await new Promise((resolve, reject) => {
+        exec(`${proverPath} ${zkeyPath} ${inputFile}`, (error, stdout, stderr) => {
+          if (error) reject(error);
+          else resolve({ stdout, stderr });
+        });
+      });
+
+      // Parse the output
+      const result = JSON.parse(stdout);
+
+      // Clean up the temporary input file
+      await fs.unlink(inputFile);
+
       console.log(`Completed job ${job.id}`);
-      return { proof, publicSignals };
+      return result;
     } catch (error) {
       console.error(`Error processing job ${job.id}:`, error);
       throw error; // This will cause the job to be marked as failed
