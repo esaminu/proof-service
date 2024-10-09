@@ -18,7 +18,7 @@ function createRedisClient() {
 
   const client = new Redis(redisUrl, {
     tls: {
-      rejectUnauthorized: false
+      rejectUnauthorized: false,
     },
     maxRetriesPerRequest: null,
     enableReadyCheck: false,
@@ -26,7 +26,7 @@ function createRedisClient() {
       const delay = Math.min(times * 100, 3000);
       console.log(`Retrying Redis connection in ${delay}ms`);
       return delay;
-    }
+    },
   });
 
   client.on('error', (error) => {
@@ -50,14 +50,14 @@ const redisClient = createRedisClient();
 const proofQueue = new Queue('proof generation', process.env.REDIS_URL, {
   redis: {
     tls: {
-      rejectUnauthorized: false
-    }
+      rejectUnauthorized: false,
+    },
   },
   settings: {
     lockDuration: 300000, // 5 minutes
     stalledInterval: 300000, // 5 minutes
     maxStalledCount: 1,
-  }
+  },
 });
 
 proofQueue.on('error', (error) => {
@@ -146,27 +146,31 @@ if (process.env.DYNO && process.env.DYNO.startsWith('worker')) {
       const witnessFile = path.join('/tmp', `witness_${job.id}.wtns`);
       tempFiles.push(witnessFile);
       await fs.writeFile(witnessFile, JSON.stringify(job.data.input));
-  
+
       // Define output file paths
       const proofFile = path.join('/tmp', `proof_${job.id}.json`);
       const publicFile = path.join('/tmp', `public_${job.id}.json`);
       tempFiles.push(proofFile, publicFile);
-  
+
       const proverPath = path.join(__dirname, 'prover');
       const zkeyPath = path.join(__dirname, 'rsa_verify_0001.zkey');
-  
+
       // Execute the prover with all required parameters
       await new Promise((resolve, reject) => {
-        execFile(proverPath, [zkeyPath, witnessFile, proofFile, publicFile], (error, stdout, stderr) => {
-          if (error) reject(error);
-          else resolve();
-        });
+        execFile(
+          proverPath,
+          [zkeyPath, witnessFile, proofFile, publicFile],
+          (error, stdout, stderr) => {
+            if (error) reject(error);
+            else resolve();
+          }
+        );
       });
-  
+
       // Read the proof and public files
       const proof = JSON.parse(await fs.readFile(proofFile, 'utf8'));
       const publicSignals = JSON.parse(await fs.readFile(publicFile, 'utf8'));
-  
+
       console.log(`Completed job ${job.id}`);
       return { proof, publicSignals };
     } catch (error) {
@@ -175,21 +179,12 @@ if (process.env.DYNO && process.env.DYNO.startsWith('worker')) {
     } finally {
       // Clean up temporary files, even if an error occurred
       await Promise.all(
-        tempFiles.map(file => 
-          fs.unlink(file).catch(err => console.error(`Failed to delete ${file}:`, err))
+        tempFiles.map((file) =>
+          fs
+            .unlink(file)
+            .catch((err) => console.error(`Failed to delete ${file}:`, err))
         )
       );
     }
-  });
-}
-
-  // Log completed jobs
-  proofQueue.on('completed', (job, result) => {
-    console.log(`Job ${job.id} completed.`);
-  });
-
-  // Log failed jobs
-  proofQueue.on('failed', (job, error) => {
-    console.error(`Job ${job.id} failed with error:`, error);
   });
 }
