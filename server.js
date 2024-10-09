@@ -140,36 +140,48 @@ if (process.env.DYNO && process.env.DYNO.startsWith('worker')) {
   // Worker process
   proofQueue.process(async (job) => {
     console.log(`Processing job ${job.id}`);
+    const tempFiles = [];
     try {
-      // Write input to a temporary file
-      const inputFile = path.join('/tmp', `input_${job.id}.json`);
-      await fs.writeFile(inputFile, JSON.stringify(job.data.input));
-
-      // Path to the prover binary and zkey file
+      // Write input to a temporary witness file
+      const witnessFile = path.join('/tmp', `witness_${job.id}.wtns`);
+      tempFiles.push(witnessFile);
+      await fs.writeFile(witnessFile, JSON.stringify(job.data.input));
+  
+      // Define output file paths
+      const proofFile = path.join('/tmp', `proof_${job.id}.json`);
+      const publicFile = path.join('/tmp', `public_${job.id}.json`);
+      tempFiles.push(proofFile, publicFile);
+  
       const proverPath = path.join(__dirname, 'prover');
       const zkeyPath = path.join(__dirname, 'rsa_verify_0001.zkey');
-
-      // Execute the prover
-      const { stdout, stderr } = await new Promise((resolve, reject) => {
-        exec(`${proverPath} ${zkeyPath} ${inputFile}`, (error, stdout, stderr) => {
+  
+      // Execute the prover with all required parameters
+      await new Promise((resolve, reject) => {
+        execFile(proverPath, [zkeyPath, witnessFile, proofFile, publicFile], (error, stdout, stderr) => {
           if (error) reject(error);
-          else resolve({ stdout, stderr });
+          else resolve();
         });
       });
-
-      // Parse the output
-      const result = JSON.parse(stdout);
-
-      // Clean up the temporary input file
-      await fs.unlink(inputFile);
-
+  
+      // Read the proof and public files
+      const proof = JSON.parse(await fs.readFile(proofFile, 'utf8'));
+      const publicSignals = JSON.parse(await fs.readFile(publicFile, 'utf8'));
+  
       console.log(`Completed job ${job.id}`);
-      return result;
+      return { proof, publicSignals };
     } catch (error) {
       console.error(`Error processing job ${job.id}:`, error);
-      throw error; // This will cause the job to be marked as failed
+      throw error;
+    } finally {
+      // Clean up temporary files, even if an error occurred
+      await Promise.all(
+        tempFiles.map(file => 
+          fs.unlink(file).catch(err => console.error(`Failed to delete ${file}:`, err))
+        )
+      );
     }
   });
+}
 
   // Log completed jobs
   proofQueue.on('completed', (job, result) => {
