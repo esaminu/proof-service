@@ -1,2 +1,2 @@
-web: node server.js
-worker: node server.js
+web: yarn start
+worker: yarn start
