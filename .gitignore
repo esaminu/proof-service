@@ -1,2 +1,10 @@
 node_modules/
-rsa_verify_0001.zkey
+*.zkey
+
+rsa_verify.r1cs
+rsa_verify.sym
+
+rsa_verify_cpp
+rsa_verify_js
+
+ppot_0080_22.ptau

@@ -21,12 +21,12 @@ template NumToBits(n) {
 
 // Pkcs1v15 + Sha256
 // exp 65537
-template RsaVerifyPkcs1v15(w, nb, e_bits, hashLen) {
+template RsaVerifyPkcs1v15(w, nb, e_bits, hashLen, payloadLen) {
     signal input exp[nb];
     signal input sign[nb];
     signal input modulus[nb];
-
     signal input hashed[hashLen];
+    signal input payload[payloadLen];
 
     // sign ** exp mod modulus
     component pm = PowerMod(w, nb, e_bits);
@@ -68,4 +68,4 @@ template RsaVerifyPkcs1v15(w, nb, e_bits, hashLen) {
     pm.out[31] === 562949953421311;
 }
 
-component main { public [ exp, modulus, hashed ] } = RsaVerifyPkcs1v15(64, 32, 17, 4);
+component main { public [ exp, modulus, hashed, payload ] } = RsaVerifyPkcs1v15(64, 32, 17, 4, 32);
