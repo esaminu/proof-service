@@ -44,7 +44,7 @@ async function verifyToken() {
     const signArray = bigintToArray(64, 32, signBigInt);
 
     // Convert modulus to bigInt array
-    const modulusBigInt = BigInt(`0x${Buffer.from(base64UrlToBase64(publicKey.n), 'base64').toString('hex')}`);
+    const modulusBigInt = BigInt(`0x${Buffer.from(base64UrlToBase64(publicKeyN), 'base64').toString('hex')}`);
     const modulusArray = bigintToArray(64, 32, modulusBigInt);
 
     // Hash the header and payload
