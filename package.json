@@ -4,7 +4,7 @@
   "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "curl -L -o rsa_verify_0001.zkey 'https://drive.google.com/uc?export=download&id=1yZMqTkNWjRloqvml0bQ4UaLp_AjTbqxV' && node server.js"
+    "start": "curl -L -o rsa_verify_0001.zkey 'https://www.dropbox.com/scl/fi/jfrd6br5syjym5p3suqrw/rsa_verify_0001.zkey?rlkey=4tlwjw7fciggggvsyf6yhsxcw&st=6u5avzkv&dl=0' && node server.js"
   },
   "keywords": [],
   "author": "",
