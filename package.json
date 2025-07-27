@@ -4,7 +4,7 @@
   "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "curl -L -o rsa_verify_0001.zkey https://storage.googleapis.com/zkey/rsa_verify_0001.zkey && node server.js"
+    "start": "curl -L -o rsa_verify_0001.zkey https://drive.google.com/file/d/1yZMqTkNWjRloqvml0bQ4UaLp_AjTbqxV && node server.js"
   },
   "keywords": [],
   "author": "",
@@ -14,5 +14,6 @@
     "bull": "^4.16.3",
     "express": "^4.21.0",
     "snarkjs": "^0.7.4"
-  }
+  },
+  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
 }
